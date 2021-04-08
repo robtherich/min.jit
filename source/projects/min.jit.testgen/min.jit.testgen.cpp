@@ -42,16 +42,9 @@ public:
 		t_jit_matrix_info out_minfo;
 		void *p;
 
-		// we must use object_method_direct for any method on the out_matrix due to bug in max-api WRT mop decorator methods
-
-		//object_method(out_matrix, _jit_sym_getinfo, &out_minfo);
-		object_method_direct(t_jit_err, (t_jit_object *, t_jit_matrix_info *), out_matrix, _jit_sym_getinfo, &out_minfo);
-
-		//object_method(out_matrix, _jit_sym_getdata, &p);
-		object_method_direct(t_jit_err, (t_jit_object *, void **), out_matrix, _jit_sym_getdata, &p);
-
-		//auto out_savelock = object_method(out_matrix, _jit_sym_lock, (void*)1);
-		auto out_savelock = object_method_direct(t_atom_long, (t_jit_object *, long), out_matrix, _jit_sym_lock, 1);
+		object_method(out_matrix, _jit_sym_getinfo, &out_minfo);
+		object_method(out_matrix, _jit_sym_getdata, &p);
+		auto out_savelock = object_method(out_matrix, _jit_sym_lock, (void*)1);
 
 		// fill it up
 		string torusline;
@@ -85,8 +78,7 @@ public:
 			}
 		}
 
-		//object_method(out_matrix, _jit_sym_lock, out_savelock);
-		object_method_direct(t_atom_long, (t_jit_object *, long), out_matrix, _jit_sym_lock, out_savelock);
+		object_method(out_matrix, _jit_sym_lock, out_savelock);
 		return JIT_ERR_NONE;
 	}
 
@@ -115,7 +107,7 @@ private:
 		// force type and planecount
 		jit_mop_single_planecount(mop, 8);
 		jit_mop_single_type(mop, _jit_sym_float32);
-		
+
 		jit_class_addadornment(c, mop);
 
 		// add our custom matrix_calc method
@@ -145,8 +137,11 @@ t_jit_err min_jit_testgen_matrix_calc(t_object* x, t_object* inputs, t_object* o
 
 	t_jit_err err = JIT_ERR_NONE;
 	auto out_matrix = (t_object*)object_method(outputs, _jit_sym_getindex, 0);
-	//auto in_matrix = (t_object*)object_method(inputs, _jit_sym_getindex, 0);
-	if (/*in_matrix && */out_matrix) {
+
+	// we must call getmatrix here due to bug in max-api WRT mop decorator methods
+	out_matrix = (t_object*)object_method(out_matrix, _jit_sym_getmatrix);
+
+	if (out_matrix) {
 		minwrap<min_jit_testgen>* job = (minwrap<min_jit_testgen>*)(x);
 		err = job->m_min_object.matrix_calc(out_matrix);
 	}
