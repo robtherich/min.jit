@@ -111,6 +111,11 @@ private:
 		t_class* c = args[0];
 		// add mop
 		auto mop = jit_object_new(_jit_sym_jit_mop, -1, 1);
+
+		// force type and planecount
+		jit_mop_single_planecount(mop, 8);
+		jit_mop_single_type(mop, _jit_sym_float32);
+		
 		jit_class_addadornment(c, mop);
 
 		// add our custom matrix_calc method
