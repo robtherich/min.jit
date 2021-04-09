@@ -29,6 +29,11 @@
 
 	<methodlist>
 
+		<method name='greeting'>
+			<digest>Post the greeting</digest>
+			<description>Post the greeting. </description>
+		</method>
+
 	</methodlist>
 
 

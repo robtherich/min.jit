@@ -10,9 +10,12 @@
 using namespace c74::min;
 using namespace c74::max;
 
+// C function declarations
 t_jit_err min_jit_testgen_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
 void min_jit_testgen_outputmatrix(max_jit_wrapper *x);
 
+
+// C++ class definition
 class min_jit_testgen : public object<min_jit_testgen>, public matrix_operator<> {
 public:
 	MIN_DESCRIPTION	{"Min test of Jitter matrix generator. Object reads a file of vertex data and outputs it as a matrix."};
@@ -23,7 +26,7 @@ public:
 	inlet<>  input	{ this, "(bang) read file and output as matrix" };
 	outlet<> output	{ this, "(matrix) Output", "matrix" };
 
-	// dummy attr
+	// greeting attr
 	attribute<symbol> greeting { this, "greeting", "hello world",
 		description {
 			"Greeting to be posted. "
@@ -31,19 +34,26 @@ public:
 		}
 	};
 
-	// unused
+	// unused: because we are using 'public matrix_operator<>' for the class definition, it is required to create a 'calc_cell' function. We are not going to use it here, since it is only used for operators.
 	template<typename matrix_type>
 	matrix_type calc_cell(matrix_type input, const matrix_info& info, matrix_coord& position) {
 		matrix_type output;
 		return output;
 	}
 
+    // this is the main workhorse of this class - it loads the matrix from a text file, and fills the matrix with the data
 	t_jit_err matrix_calc(t_object* out_matrix) {
-		t_jit_matrix_info out_minfo;
+        // declare matrix info object
+        t_jit_matrix_info out_minfo;
+        // declare pointer to matrix content data
 		void *p;
 
+        // gather matrix info
 		object_method(out_matrix, _jit_sym_getinfo, &out_minfo);
+        // gather pointer to matrix data
 		object_method(out_matrix, _jit_sym_getdata, &p);
+        
+        // create LOCK
 		auto out_savelock = object_method(out_matrix, _jit_sym_lock, (void*)1);
 
 		// fill it up
@@ -52,7 +62,7 @@ public:
 		// path to this external
 		path extern_file("min.jit.testgen", path::filetype::external);
 		std::string torus_fullpath = extern_file;
-		// chop
+		// step two folders up
 		torus_fullpath.erase(torus_fullpath.rfind('/'));
 		torus_fullpath.erase(torus_fullpath.rfind('/'));
 		// path to data file
@@ -60,15 +70,24 @@ public:
 		std::ifstream torusdata(torus_fullpath);
 
 		// read the file and shove it in the matrix
+        
+        //declare cell-pointer
 		float *fop = nullptr;
+        // loop through dim1
 		for (auto j = 0; j < out_minfo.dim[1]; ++j) {
+            // loop through dim0
 			for (auto i = 0; i < out_minfo.dim[0]; ++i) {
+                // set cell-pointer to matrix cell
 				fop = (float *)((char*)p + (j * out_minfo.dimstride[1] + i * out_minfo.dimstride[0]));
 
+                // if there is another line in the file
 				if(getline (torusdata, torusline)) {
+                    // parse cell data from string
 					std::istringstream iss(torusline);
 					std::vector<std::string> torusvals(std::istream_iterator<std::string>{iss}, std::istream_iterator<std::string>());
+                    // loop through planes (make sure not to overshoot planecount or the parsed torusline data)
 					for (auto k = 0; k < out_minfo.planecount && k < torusvals.size(); ++k) {
+                        // store cell value for plane k
 						fop[k] = stof(torusvals[k]);
 					}
 				}
@@ -78,12 +97,14 @@ public:
 			}
 		}
 
+        // release LOCK
 		object_method(out_matrix, _jit_sym_lock, out_savelock);
 		return JIT_ERR_NONE;
 	}
 
 private:
-	// override maxob_setup if we want to set defaults
+	// if we want to set defaults (instead of using the attributes) we need to override maxob_setup
+    
 	/*message<> maxob_setup {this, "maxob_setup", MIN_FUNCTION {
 		// get the max object wrapper
 		c74::max::t_object* mob = NULL;
@@ -98,9 +119,9 @@ private:
 		return {};
 	}};*/
 
-	// override jitclass_setup so we can have our own matrix_calc
+	// override jitclass_setup so we can have our own matrix_calc. jitclass_setup is called first (and only once when the object is loaded for the first time) during the intitialization of the object.
 	message<> jitclass_setup {this, "jitclass_setup", MIN_FUNCTION {
-		t_class* c = args[0];
+        t_class* c = args[0];
 		// add mop
 		auto mop = jit_object_new(_jit_sym_jit_mop, -1, 1);
 
@@ -116,13 +137,14 @@ private:
 		return {};
 	}};
 
-	// override maxclass_setup so we can have our own outputmatrix
+	// override maxclass_setup so we can have our own outputmatrix. maxclass_setup is called second (and only once when the object is loaded for the first time) during the intitialization of the object.
 	message<> maxclass_setup {this, "maxclass_setup", MIN_FUNCTION {
-		t_class* c = args[0];
+        t_class* c = args[0];
 		long flags = MAX_JIT_MOP_FLAGS_OWN_OUTPUTMATRIX | MAX_JIT_MOP_FLAGS_OWN_JIT_MATRIX;
 		max_jit_class_mop_wrap(c, this_jit_class, flags);
 		max_jit_class_wrap_standard(c, this_jit_class, 0);
 		class_addmethod(c, (method)max_jit_mop_assist, "assist", A_CANT, 0);
+        // register the static c-method 'min_jit_testgen_outputmatrix' (see below) to be called on message "outputmatrix"
 		max_jit_class_addmethod_usurp_low(c, (method)min_jit_testgen_outputmatrix, "outputmatrix");
 		return {};
 	}};
@@ -130,9 +152,11 @@ private:
 
 MIN_EXTERNAL(min_jit_testgen);
 
-// add this as a static C function which allows calling from JS
+// C function definitions:
+
+// add this as a static C function which allows calling from JS. This method is called by static method 'min_jit_testgen_outputmatrix' (see below)
 t_jit_err min_jit_testgen_matrix_calc(t_object* x, t_object* inputs, t_object* outputs) {
-	if (!x || !inputs || !outputs)
+    if (!x || !inputs || !outputs)
 		return JIT_ERR_INVALID_PTR;
 
 	t_jit_err err = JIT_ERR_NONE;
@@ -143,6 +167,7 @@ t_jit_err min_jit_testgen_matrix_calc(t_object* x, t_object* inputs, t_object* o
 
 	if (out_matrix) {
 		minwrap<min_jit_testgen>* job = (minwrap<min_jit_testgen>*)(x);
+        // call our custom matrix_calc function defined inside the C++ class
 		err = job->m_min_object.matrix_calc(out_matrix);
 	}
 	else {
@@ -152,18 +177,21 @@ t_jit_err min_jit_testgen_matrix_calc(t_object* x, t_object* inputs, t_object* o
 }
 
 
+// this method is called on a 'outputmatrix' or 'bang' message
 void min_jit_testgen_outputmatrix(max_jit_wrapper *x) {
-	long outputmode = max_jit_mop_getoutputmode(x);
+    long outputmode = max_jit_mop_getoutputmode(x);
+    // get the reference to the max-wrapped jitter object
 	t_object *mop = (t_object*)max_jit_obex_adornment_get(x, _jit_sym_jit_mop);
 	t_jit_err err;
 
 	if (outputmode && mop) { //always output unless output mode is none
 		if (outputmode==1) {
+            // calling function 'min_jit_testgen_matrix_calc'
 			err = (t_jit_err)object_method(
 				(t_object*)max_jit_obex_jitob_get(x),
 				_jit_sym_matrix_calc,
 				object_method(mop, _jit_sym_getinputlist),
-				object_method(mop,_jit_sym_getoutputlist)
+				object_method(mop, _jit_sym_getoutputlist)
 			);
 			if(err) {
 				jit_error_code(x,err);

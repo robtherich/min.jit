@@ -10,7 +10,12 @@ You can use the objects provided in this package as-is.
 
 To code your own objects, or to re-compile existing objects, you will need a compiler:
 
-* On the Mac this means **Xcode 9 or later** (you can get from the App Store for free). 
+* On the Mac this means **Xcode 9 or later** (you can get from the App Store for free).
 * On Windows this means **Visual Studio 2017** (you can download a free version from Microsoft). The installer for Visual Studio 2017 offers an option to install Git, which you should choose to do.
 
 You will also need the Min-DevKit, available from the Package Manager inside of Max or [directly from Github](https://github.com/Cycling74/min-devkit).
+
+
+## Building
+
+follow these building instructions: https://github.com/Cycling74/min-devkit but clone this repo instead: `git clone https://github.com/robtherich/min.jit.git --recursive`
