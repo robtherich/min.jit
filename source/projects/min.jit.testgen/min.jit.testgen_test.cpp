@@ -21,7 +21,9 @@ SCENARIO("object produces correct output") {
         REQUIRE((my_object.greeting == symbol("hello world")));
 
         // now proceed to testing various sequences of events
-        WHEN("a 'bang' is received") {
+
+		// not used in this example but leaving here for reference
+        /*WHEN("a 'bang' is received") {
             my_object.bang();
             THEN("our greeting is produced at the outlet") {
                 auto& output = *c74::max::object_getoutput(my_object, 0);
@@ -29,6 +31,6 @@ SCENARIO("object produces correct output") {
                 REQUIRE((output[0].size() == 1));
                 REQUIRE((output[0][0] == symbol("hello world")));
             }
-        }
+        }*/
     }
 }
