@@ -29,9 +29,9 @@
 
 	<methodlist>
 
-		<method name='greeting'>
-			<digest>Post the greeting</digest>
-			<description>Post the greeting. </description>
+		<method name='say_hi'>
+			<digest></digest>
+			<description></description>
 		</method>
 
 	</methodlist>

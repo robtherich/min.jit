@@ -13,7 +13,7 @@ using namespace c74::max;
 // C function declarations
 t_jit_err min_jit_testgen_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
 void min_jit_testgen_outputmatrix(max_jit_wrapper *x);
-
+void min_jit_testgen_assist(void* x, void* b, long m, long a, char* s);
 
 // C++ class definition
 class min_jit_testgen : public object<min_jit_testgen>, public matrix_operator<> {
@@ -31,6 +31,15 @@ public:
 		description {
 			"Greeting to be posted. "
 			"The greeting will be posted to the Max console when a bang is received."
+		}
+	};
+
+	message<> say_hi {this, "say_hi",
+		MIN_FUNCTION {
+			t_atom a;
+			atom_setsym(&a, greeting.get());
+			outlet_anything(non_matrix_outlet, gensym("greeting"), 1, &a);
+			return {};
 		}
 	};
 
@@ -103,6 +112,9 @@ public:
 	}
 
 private:
+
+	t_outlet *non_matrix_outlet;
+
 	// if we want to set defaults (instead of using the attributes) we need to override maxob_setup
     
 	/*message<> maxob_setup {this, "maxob_setup", MIN_FUNCTION {
@@ -118,6 +130,26 @@ private:
 
 		return {};
 	}};*/
+
+	message<> mop_setup {this, "mop_setup",
+		MIN_FUNCTION {
+			void*     o = maxobj();
+			t_object* x = args[args.size() - 1];
+
+			max_jit_obex_jitob_set(x, o);
+			max_jit_obex_dumpout_set(x, outlet_new(x, NULL));
+
+			// non-matrix custom outlets go here...
+			non_matrix_outlet = (t_outlet*)outlet_new(x, NULL);
+
+			max_jit_mop_setup(x);
+			max_jit_mop_inputs(x);
+			max_jit_mop_outputs(x);
+			max_jit_mop_matrix_args(x, args.size()-1, const_cast<atom *>(&args[0]));
+
+			return {};
+		}
+	};
 
 	// override jitclass_setup so we can have our own matrix_calc. jitclass_setup is called first (and only once when the object is loaded for the first time) during the intitialization of the object.
 	message<> jitclass_setup {this, "jitclass_setup", MIN_FUNCTION {
@@ -143,7 +175,7 @@ private:
 		long flags = MAX_JIT_MOP_FLAGS_OWN_OUTPUTMATRIX | MAX_JIT_MOP_FLAGS_OWN_JIT_MATRIX;
 		max_jit_class_mop_wrap(c, this_jit_class, flags);
 		max_jit_class_wrap_standard(c, this_jit_class, 0);
-		class_addmethod(c, (method)max_jit_mop_assist, "assist", A_CANT, 0);
+		class_addmethod(c, (method)min_jit_testgen_assist, "assist", A_CANT, 0);
         // register the static c-method 'min_jit_testgen_outputmatrix' (see below) to be called on message "outputmatrix"
 		max_jit_class_addmethod_usurp_low(c, (method)min_jit_testgen_outputmatrix, "outputmatrix");
 		return {};
@@ -202,6 +234,23 @@ void min_jit_testgen_outputmatrix(max_jit_wrapper *x) {
 		}
 		else {
 			max_jit_mop_outputmatrix(x);
+		}
+	}
+}
+
+void min_jit_testgen_assist(void* x, void* b, long m, long a, char* s) {
+	if (m == 1) {    // input
+		sprintf(s, "bang, messages in");
+	}
+	else {    // output
+		if (a == 0) {
+			sprintf(s, "(matrix) Output");
+		}
+		else if (a == 1) {
+			sprintf(s, "(symbol) Some other stuff");
+		}
+		else {
+			sprintf(s, "dumpout");
 		}
 	}
 }
